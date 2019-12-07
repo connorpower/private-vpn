@@ -1,0 +1,297 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: This template deploys an OpenVPN server in a public subnet of VPC
+  its own VPC with internet access provided for by an internet gateway, with a
+  default route on the public subnet.
+
+Parameters:
+  ProjectName:
+    Description: An ProjectName name that is prefixed to all resource names
+    Type: String
+    Default: PrivateVPN
+
+  Environment:
+    Description: An evironment tag name
+    Type: String
+    Default: production
+
+  CostAllocationTagKey:
+    Description: The tag key used for cost allocation tags
+    Type: String
+    Default: Cost Center
+
+  CostAllocationTagValue:
+    Description: The tag value for the cost allocation
+    Type: String
+    Default: private-vpn
+
+  VpcCIDR:
+    Description: Please enter the CIDR range for this VPC
+    Type: String
+    Default: 10.0.0.0/24
+
+  PublicSubnetCIDR:
+    Description: Please enter the CIDR range for the public subnet
+    Type: String
+    Default: 10.0.0.0/28
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: ProjectName
+        Parameters:
+          - ProjectName
+      -
+        Label:
+          default: Tagging
+        Parameters:
+          - Environment
+          - CostAllocationTagKey
+          - CostAllocationTagValue
+      -
+        Label:
+          default: VPC
+        Parameters:
+          - VpcCIDR
+          - PublicSubnetCIDR
+
+    ParameterLabels:
+      ProjectName:
+        default: ProjectName Name
+      Environment:
+        default: Environment (Prod/Dev/Etc.)
+      CostAllocationTagKey:
+        default: Cost Allocation Tag Key
+      CostAllocationTagValue:
+        default: Cost Allocation Tag Value
+      VpcCIDR:
+        default: VPC CIDR Block
+      PublicSubnetCIDR:
+        default: Public Subnet CIDR Block
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} Internet Gateway
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} Public Subnet (AZ1)
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  VPCEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} EIP for VPC Server
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} Public Routes
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+
+  OpenVPNSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: open-vpn-sg
+      GroupDescription: Security group for OpenVPN
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: udp
+        FromPort: 1194
+        ToPort: 1194
+        CidrIp: 0.0.0.0/0
+        Description: OpenVPN (when using UDP)
+      - IpProtocol: tcp
+        FromPort: 1194
+        ToPort: 1194
+        CidrIp: 0.0.0.0/0
+        Description: OpenVPN (when using TCP)
+      SecurityGroupEgress:
+      - IpProtocol: -1
+        FromPort: -1
+        ToPort: -1
+        CidrIp: 0.0.0.0/0
+        Description: All traffic
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} Security Group for OpenVPN Server
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  PublicSubnetNACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} Network ACL for Public Subnet (AZ1)
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  PublicSubnetNACLInbound1194UDP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicSubnetNACL
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+      PortRange:
+        From: 1194
+        To: 1194
+      Protocol: 17 # UDP
+      RuleAction: allow
+      RuleNumber: 100
+
+  PublicSubnetNACLInbound1194TCP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicSubnetNACL
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+      PortRange:
+        From: 1194
+        To: 1194
+      Protocol: 6 # TCP
+      RuleAction: allow
+      RuleNumber: 200
+
+  PublicSubnetNACLOutbound80TCP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicSubnetNACL
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+      PortRange:
+        From: 80
+        To: 80
+      Protocol: 6 # TCP
+      RuleAction: allow
+      RuleNumber: 100
+
+  PublicSubnetNACLOutbound443TCP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicSubnetNACL
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+      PortRange:
+        From: 443
+        To: 443
+      Protocol: 6 # TCP
+      RuleAction: allow
+      RuleNumber: 200
+
+  PublicSubnetNACLOutboundEphemeralTCP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicSubnetNACL
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+      PortRange:
+        From: 32768
+        To: 65535
+      Protocol: 6 # TCP
+      RuleAction: allow
+      RuleNumber: 300
+
+  PublicSubnetNACLOutboundEphemeralUDP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicSubnetNACL
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+      PortRange:
+        From: 32768
+        To: 65535
+      Protocol: 17 # UDP
+      RuleAction: allow
+      RuleNumber: 400
+
+Outputs:
+  VPC:
+    Description: The ID of the VPC
+    Value: !Ref VPC
+
+  PublicSubnet:
+    Description: A reference to the public subnet in AZ1
+    Value: !Ref PublicSubnet
+
+  OpenVPNSecurityGroup:
+    Description: Security group applied to the OpenVPN server
+    Value: !Ref OpenVPNSecurityGroup
+
+  PublicSubnetNACL:
+    Description: NACL applied to the public subnets
+    Value: !Ref PublicSubnetNACL
