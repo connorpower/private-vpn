@@ -347,7 +347,6 @@ Resources:
         - Key: deletion_protection.enabled
           Value: true
       Scheme: internet-facing
-      SecurityGroups: !Ref VPNELBSecurityGroup
       SubnetMappings:
         - AllocationId: !GetAtt VPNLoadBalancerEIP.AllocationId
           SubnetId: !Ref PublicSubnet
