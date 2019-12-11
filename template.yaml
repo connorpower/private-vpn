@@ -313,7 +313,7 @@ Resources:
         - OldestInstance
       LaunchTemplate:
         LaunchTemplateId: !Ref VPNEC2LaunchTemplate
-        Version: String
+        Version: !GetAtt VPNEC2LaunchTemplate.LatestVersionNumber
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName} AutoScaling Group
