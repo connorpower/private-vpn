@@ -406,3 +406,6 @@ Resources:
               - Key: !Ref CostAllocationTagKey
                 Value: !Ref CostAllocationTagValue
         # UserData: # TODO
+          # aws ec2 modify-instance-attribute \
+          #    --instance-id "$(ec2-metadata -i | awk '{print $2}')" \
+          #    --no-source-dest-check
