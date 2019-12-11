@@ -315,8 +315,8 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref VPNEC2LaunchTemplate
         Version: !GetAtt VPNEC2LaunchTemplate.LatestVersionNumber
-      TargetGroupArns:
-      - !Ref VPNELBTargetGroup
+      TargetGroupARNs:
+        - !Ref VPNELBTargetGroup
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName} AutoScaling Group
@@ -377,7 +377,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref EC2AutoScalingGroup
+        - TargetGroupArn: !Ref VPNELBTargetGroup
           Type: forward
       LoadBalancerArn: !Ref VPNLoadBalancer
       Port: 1194
