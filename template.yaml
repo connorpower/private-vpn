@@ -315,6 +315,8 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref VPNEC2LaunchTemplate
         Version: !GetAtt VPNEC2LaunchTemplate.LatestVersionNumber
+      TargetGroupArns:
+      - !Ref VPNELBTargetGroup
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName} AutoScaling Group
@@ -351,6 +353,21 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName} ELB
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  VPNELBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckProtocol: UDP
+      Port: 1194
+      Protocol: UDP
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} ELB Target Group for VPN Instances
         - Key: Environment
           Value: !Ref Environment
         - Key: !Ref CostAllocationTagKey
