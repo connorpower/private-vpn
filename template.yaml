@@ -317,10 +317,13 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName} AutoScaling Group
+          PropagateAtLaunch: false
         - Key: Environment
           Value: !Ref Environment
+          PropagateAtLaunch: false
         - Key: !Ref CostAllocationTagKey
           Value: !Ref CostAllocationTagValue
+          PropagateAtLaunch: false
 
   VPNLoadBalancerEIP:
     Type: AWS::EC2::EIP
