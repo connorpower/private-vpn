@@ -309,6 +309,7 @@ Resources:
       MinSize: 1
       MaxSize: 2
       HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
       TerminationPolicies:
         - OldestInstance
       LaunchTemplate:
