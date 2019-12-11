@@ -72,7 +72,29 @@ Metadata:
       PublicSubnetCIDR:
         default: Public Subnet CIDR Block
 
+  Outputs:
+    VPC:
+      Description: The ID of the VPC
+      Value: !Ref VPC
+
+    PublicSubnet:
+      Description: A reference to the public subnet in AZ1
+      Value: !Ref PublicSubnet
+
+    OpenVPNSecurityGroup:
+      Description: Security group applied to the OpenVPN server
+      Value: !Ref OpenVPNSecurityGroup
+
+    PublicSubnetNACL:
+      Description: NACL applied to the public subnets
+      Value: !Ref PublicSubnetNACL
+
 Resources:
+
+  ##############################################################################
+  # VPC
+  ##############################################################################
+
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -119,19 +141,6 @@ Resources:
         - Key: !Ref CostAllocationTagKey
           Value: !Ref CostAllocationTagValue
 
-  VPCEIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-      Tags:
-        - Key: Name
-          Value: !Sub ${ProjectName} EIP for VPC Server
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: !Ref CostAllocationTagKey
-          Value: !Ref CostAllocationTagValue
-
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -158,37 +167,6 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet
 
-  OpenVPNSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: open-vpn-sg
-      GroupDescription: Security group for OpenVPN
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-      - IpProtocol: udp
-        FromPort: 1194
-        ToPort: 1194
-        CidrIp: 0.0.0.0/0
-        Description: OpenVPN (when using UDP)
-      - IpProtocol: tcp
-        FromPort: 1194
-        ToPort: 1194
-        CidrIp: 0.0.0.0/0
-        Description: OpenVPN (when using TCP)
-      SecurityGroupEgress:
-      - IpProtocol: -1
-        FromPort: -1
-        ToPort: -1
-        CidrIp: 0.0.0.0/0
-        Description: All traffic
-      Tags:
-        - Key: Name
-          Value: !Sub ${ProjectName} Security Group for OpenVPN Server
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: !Ref CostAllocationTagKey
-          Value: !Ref CostAllocationTagValue
-
   PublicSubnetNACL:
     Type: AWS::EC2::NetworkAcl
     Properties:
@@ -213,19 +191,6 @@ Resources:
       Protocol: 17 # UDP
       RuleAction: allow
       RuleNumber: 100
-
-  PublicSubnetNACLInbound1194TCP:
-    Type: AWS::EC2::NetworkAclEntry
-    Properties:
-      NetworkAclId: !Ref PublicSubnetNACL
-      CidrBlock: 0.0.0.0/0
-      Egress: false
-      PortRange:
-        From: 1194
-        To: 1194
-      Protocol: 6 # TCP
-      RuleAction: allow
-      RuleNumber: 200
 
   PublicSubnetNACLOutbound80TCP:
     Type: AWS::EC2::NetworkAclEntry
@@ -279,19 +244,145 @@ Resources:
       RuleAction: allow
       RuleNumber: 400
 
-Outputs:
-  VPC:
-    Description: The ID of the VPC
-    Value: !Ref VPC
+  ##############################################################################
+  # EC2 / ELB
+  ##############################################################################
 
-  PublicSubnet:
-    Description: A reference to the public subnet in AZ1
-    Value: !Ref PublicSubnet
+  VPNELBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: vpn-elb-sg
+      GroupDescription: Security group for the VPN ELB
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: udp
+          FromPort: 1194
+          ToPort: 1194
+          CidrIp: 0.0.0.0/0
+          Description: OpenVPN over UDP
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+          Description: All traffic
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} Security Group for the VPN ELB
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
 
-  OpenVPNSecurityGroup:
-    Description: Security group applied to the OpenVPN server
-    Value: !Ref OpenVPNSecurityGroup
+  VPNEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: vpn-ec2-sg
+      GroupDescription: Security group for OpenVPN EC2 instances
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: udp
+          FromPort: 1194
+          ToPort: 1194
+          SourceSecurityGroupId: !Ref VPNELBSecurityGroup
+          Description: OpenVPN over UDP
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          SourceSecurityGroupId: !Ref VPNELBSecurityGroup
+          Description: All traffic
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} Security Group for OpenVPN EC2 instances
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
 
-  PublicSubnetNACL:
-    Description: NACL applied to the public subnets
-    Value: !Ref PublicSubnetNACL
+  EC2AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet
+      DesiredCapacity: 1
+      MinSize: 1
+      MaxSize: 2
+      HealthCheckType: ELB
+      TerminationPolicies:
+        - OldestInstance
+      LaunchTemplate:
+        LaunchTemplateId: !Ref VPNEC2LaunchTemplate
+        Version: String
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} AutoScaling Group
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  VPNLoadBalancerEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} EIP for VPN ELB
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  VPNLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: true
+      Scheme: internet-facing
+      SecurityGroups: !Ref VPNELBSecurityGroup
+      SubnetMappings:
+        - AllocationId: !GetAtt VPNLoadBalancerEIP.AllocationId
+          SubnetId: !Ref PublicSubnet
+      Type: network
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName} ELB
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: !Ref CostAllocationTagKey
+          Value: !Ref CostAllocationTagValue
+
+  VPNLoadBalancer1194UDPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref EC2AutoScalingGroup
+          Type: forward
+      LoadBalancerArn: !Ref VPNLoadBalancer
+      Port: 1194
+      Protocol: UDP
+
+  VPNEC2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: ami-00068cd7555f543d5 # Amazon Linux 2 AMI (HVM, 64-bit x86)
+        InstanceInitiatedShutdownBehavior: terminate
+        InstanceType: t2.micro
+        # KeyName: # TODO
+        SecurityGroupIds:
+          - !Ref VPNEC2SecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub ${ProjectName} OpenVPN Instance
+              - Key: Environment
+                Value: !Ref Environment
+              - Key: !Ref CostAllocationTagKey
+                Value: !Ref CostAllocationTagValue
+        # UserData: # TODO
