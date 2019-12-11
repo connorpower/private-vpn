@@ -361,9 +361,12 @@ Resources:
   VPNELBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      HealthCheckProtocol: UDP
       Port: 1194
       Protocol: UDP
+      # TODO: The health check will fail. We need to implement a TCP or HTTP
+      # health check with relays the local OpenVN status perhaps using the
+      # nagios script (https://github.com/liquidat/nagios-icinga-openvpn)
+      HealthCheckProtocol: TCP
       VpcId: !Ref VPC
       Tags:
         - Key: Name
