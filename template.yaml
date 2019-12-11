@@ -343,9 +343,6 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       IpAddressType: ipv4
-      LoadBalancerAttributes:
-        - Key: deletion_protection.enabled
-          Value: true
       Scheme: internet-facing
       SubnetMappings:
         - AllocationId: !GetAtt VPNLoadBalancerEIP.AllocationId
