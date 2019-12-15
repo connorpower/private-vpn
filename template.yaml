@@ -281,11 +281,24 @@ Resources:
       GroupDescription: Security group for OpenVPN EC2 instances
       VpcId: !Ref VPC
       SecurityGroupIngress:
+      # TODO: remove
         - IpProtocol: udp
           FromPort: 1194
           ToPort: 1194
-          SourceSecurityGroupId: !Ref VPNELBSecurityGroup
+          CidrIp: 0.0.0.0/0
           Description: OpenVPN over UDP
+      # TODO: remove
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH
+#      SecurityGroupIngress:
+#        - IpProtocol: udp
+#          FromPort: 1194
+#          ToPort: 1194
+#          SourceSecurityGroupId: !Ref VPNELBSecurityGroup
+#          Description: OpenVPN over UDP
       SecurityGroupEgress:
         - IpProtocol: -1
           FromPort: -1
