@@ -475,7 +475,7 @@ Resources:
             - firewall
             - nat-forwarding
             - auto-patching
-            - open-vpn-monitoring
+            - openvpn-monitoring
         firewall:
           packages:
             yum:
@@ -525,7 +525,7 @@ Resources:
                   --instance-id $(ec2-metadata -i | awk '{print $2}') \
                   --no-source-dest-check \
                   --region ${AWS::Region}
-        open-vpn-monitoring:
+        openvpn-monitoring:
           files:
             /usr/local/bin/openvpn-monitor.py:
               content: !Sub |
@@ -574,7 +574,7 @@ Resources:
               owner: root
               group: root
           services:
-            open-vpn-monitor:
+            openvpn-monitor:
               enabled: "true"
               ensureRunning: "true"
               files:
