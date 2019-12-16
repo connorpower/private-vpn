@@ -461,20 +461,28 @@ Resources:
       AWS::CloudFormation::Init:
         configSets:
           default:
-            - firewall
+            - start-firewall
+            - configure-firewall
             - nat-forwarding
             - auto-patching
             - openvpn-monitoring
-        firewall:
+        start-firewall:
           packages:
             yum:
               firewalld: []
+          services:
+            sysvinit:
+              firewalld:
+                enabled: "true"
+                ensureRunning: "true"
+        configure-firewall:
           files:
             /tmp/configure-firewalld:
               content: !Sub |
                 #!/bin/bash
                 # Prune services, allow openvpn and assign eth0 to the external zone
                 # which supports ip masquerading by default.
+
                 firewall-cmd --permanent --zone=public --set-target=DROP # Also blocks pings
                 firewall-cmd --permanent --zone=external --set-target=DROP
                 firewall-cmd --permanent --zone=external --change-interface=eth0
@@ -485,19 +493,12 @@ Resources:
                 firewall-cmd --permanent --zone=internal --remove-service=dhcpv6-client
                 firewall-cmd --permanent --zone=internal --add-source=10.8.0.0/22
                 firewall-cmd --reload
-              mode: "000744"
+              mode: "000755"
               owner: root
               group: root
-          services:
-            sysvinit:
-              firewalld:
-                enabled: "true"
-                ensureRunning: "true"
-                files:
-                  - /tmp/configure-firewalld
-            commands:
-              configure:
-                command: /tmp/configure-firewalld
+          commands:
+            configure:
+              command: /tmp/configure-firewalld
         nat-forwarding:
           files:
             /etc/sysctl.conf:
