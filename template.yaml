@@ -36,6 +36,13 @@ Parameters:
     Type: String
     Default: 10.0.0.0/28
 
+  OpenVPNHealthCheckPort:
+    Description: |
+      Customise the health check port used by ELB to assess the VPN server.
+      This is a different port to the port used by VPN services.
+    Type: Number
+    Default: 17085
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -373,7 +380,7 @@ Resources:
       Port: 1194
       Protocol: UDP
       HealthCheckProtocol: TCP
-      HealthCheckPort: 12321
+      HealthCheckPort: !Ref OpenVPNHealthCheckPort
       VpcId: !Ref VPC
       Tags:
         - Key: Name
@@ -480,11 +487,11 @@ Resources:
         open-vpn-monitoring:
           files:
             /usr/local/bin/openvpn-monitor.py:
-              content: |
+              content: !Sub |
                 import SocketServer
 
                 HOST = "localhost"
-                PORT = 12321
+                PORT = ${OpenVPNHealthCheckPort}
 
                 class EchoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     pass
