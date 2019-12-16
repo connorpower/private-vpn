@@ -464,10 +464,11 @@ Resources:
             enable-ip-forwarding:
               command: /sbin/sysctl -w net.ipv4.ip_forward=1
             disable-source-dest-check:
-              command: |
+              command: !Sub |
                 aws ec2 modify-instance-attribute
                     --instance-id $(ec2-metadata -i | awk '{print $2}')
                     --no-source-dest-check"
+                    --region ${AWS::Region}
           services:
             firewalld:
               enabled: "true"
