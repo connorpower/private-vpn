@@ -372,10 +372,8 @@ Resources:
     Properties:
       Port: 1194
       Protocol: UDP
-      # TODO: The health check will fail. We need to implement a TCP or HTTP
-      # health check with relays the local OpenVN status perhaps using the
-      # nagios script (https://github.com/liquidat/nagios-icinga-openvpn)
       HealthCheckProtocol: TCP
+      HealthCheckPort: 12321
       VpcId: !Ref VPC
       Tags:
         - Key: Name
@@ -432,6 +430,7 @@ Resources:
           default:
             - nat-forwarding
             - auto-patching
+            - open-vpn-monitoring
         nat-forwarding:
           packages:
             yum:
@@ -478,6 +477,60 @@ Resources:
             commands:
               configure:
                 command: /tmp/configure-firewalld
+        open-vpn-monitoring:
+          files:
+            /usr/local/bin/open-vpn-monitor.py:
+              content: |
+                import SocketServer
+
+                HOST = "localhost"
+                PORT = 12321
+
+                class EchoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+                    pass
+
+                class EchoRequestHandler(SocketServer.StreamRequestHandler):
+                    def handle(self):
+                        print "connection from %s" % self.client_address[0]
+                        while True:
+                            line = self.rfile.readline()
+                            if not line: break
+                            print "%s wrote: %s" % (self.client_address[0], line.rstrip())
+                            self.wfile.write(line)
+                        print "%s disconnected" % self.client_address[0]
+
+                server = EchoServer((HOST, PORT), EchoRequestHandler)
+
+                print "server listening on %s:%s" % server.server_address
+                server.serve_forever()
+              mode: "000644"
+              owner: root
+              group: root
+            /etc/systemd/system/open-vpn-monitor.service:
+              content: !Sub |
+                [Unit]
+                Description=OpenVPN monitoring service
+                After=openvpn@server.service
+                StartLimitIntervalSec=0
+                [Service]
+                Type=simple
+                Restart=always
+                RestartSec=1
+                User=nobody
+                Group=nobody
+                ExecStart=/usr/bin/env python /usr/local/bin/open-vpn-monitor.py
+                [Install]
+                WantedBy=multi-user.target
+              mode: "000644"
+              owner: root
+              group: root
+          services:
+            open-vpn-monitor:
+              enabled: "true"
+              ensureRunning: "true"
+              files:
+                - /usr/local/bin/open-vpn-monitor.py
+                - /etc/systemd/system/open-vpn-monitor.service
         auto-patching:
           files:
             /tmp/mycron:
