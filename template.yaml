@@ -326,8 +326,8 @@ Resources:
           CidrIp: 0.0.0.0/0
           Description: SSH
         - IpProtocol: tcp
-          FromPort: !Ref HealthCheckPort
-          ToPort: !Ref HealthCheckPort
+          FromPort: !Ref OpenVPNHealthCheckPort
+          ToPort: !Ref OpenVPNHealthCheckPort
           SourceSecurityGroupId: !Ref VPNELBSecurityGroup
           Description: Custom health check port for ELB health checks
       SecurityGroupEgress:
@@ -477,7 +477,7 @@ Resources:
                 firewall-cmd --permanent --zone=external --set-target=DROP
                 firewall-cmd --permanent --zone=external --change-interface=eth0
                 firewall-cmd --permanent --zone=external --add-service=openvpn
-                firewall-cmd --permanent --zone=external --add-port=${HealthCheckPort}/tcp
+                firewall-cmd --permanent --zone=external --add-port=${OpenVPNHealthCheckPort}/tcp
                 firewall-cmd --permanent --zone=internal --remove-service=mdns
                 firewall-cmd --permanent --zone=internal --remove-service=samba-client
                 firewall-cmd --permanent --zone=internal --remove-service=dhcpv6-client
