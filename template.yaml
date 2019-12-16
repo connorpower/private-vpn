@@ -209,7 +209,7 @@ Resources:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref PublicSubnetNACL
-      CidrBlock: !Ref PublicSubnetCIDR
+      CidrBlock: !Ref VpcCIDR
       Egress: false
       PortRange:
         From: !Ref OpenVPNHealthCheckPort
@@ -275,7 +275,7 @@ Resources:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref PublicSubnetNACL
-      CidrBlock: !Ref PublicSubnetCIDR
+      CidrBlock: !Ref VpcCIDR
       Egress: true
       PortRange:
         From: !Ref OpenVPNHealthCheckPort
@@ -335,7 +335,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref OpenVPNHealthCheckPort
           ToPort: !Ref OpenVPNHealthCheckPort
-          CidrIp: !Ref PublicSubnetCIDR
+          CidrIp: !Ref VpcCIDR
           Description: Custom health check port for ELB health checks
       SecurityGroupEgress:
         - IpProtocol: tcp
