@@ -479,7 +479,7 @@ Resources:
                 command: /tmp/configure-firewalld
         open-vpn-monitoring:
           files:
-            /usr/local/bin/open-vpn-monitor.py:
+            /usr/local/bin/openvpn-monitor.py:
               content: |
                 import SocketServer
 
@@ -506,7 +506,7 @@ Resources:
               mode: "000644"
               owner: root
               group: root
-            /etc/systemd/system/open-vpn-monitor.service:
+            /etc/systemd/system/openvpn-monitor.service:
               content: !Sub |
                 [Unit]
                 Description=OpenVPN monitoring service
@@ -519,7 +519,7 @@ Resources:
                 RestartSec=1
                 User=nobody
                 Group=nobody
-                ExecStart=/usr/bin/env python /usr/local/bin/open-vpn-monitor.py
+                ExecStart=/usr/bin/env python /usr/local/bin/openvpn-monitor.py
 
                 [Install]
                 WantedBy=multi-user.target
@@ -531,8 +531,8 @@ Resources:
               enabled: "true"
               ensureRunning: "true"
               files:
-                - /usr/local/bin/open-vpn-monitor.py
-                - /etc/systemd/system/open-vpn-monitor.service
+                - /usr/local/bin/openvpn-monitor.py
+                - /etc/systemd/system/openvpn-monitor.service
         auto-patching:
           files:
             /tmp/mycron:
