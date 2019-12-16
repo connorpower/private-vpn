@@ -518,7 +518,6 @@ Resources:
                 [Unit]
                 Description=OpenVPN monitoring service
                 After=openvpn@server.service
-                StartLimitIntervalSec=0
 
                 [Service]
                 Type=simple
