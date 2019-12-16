@@ -542,7 +542,8 @@ Resources:
         auto-patching:
           files:
             /tmp/mycron:
-              content: 0 0 * * * yum -y update --security
+              content: |
+                0 0 * * * yum -y update --security
               mode: "000644"
               owner: root
               group: root
