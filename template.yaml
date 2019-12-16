@@ -500,11 +500,12 @@ Resources:
               owner: root
               group: root
           services:
-            firewalld:
-              enabled: "true"
-              ensureRunning: "true"
-              files:
-                - /tmp/configure-firewalld
+            sysvinit:
+              firewalld:
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - /tmp/configure-firewalld
             commands:
               configure:
                 command: /tmp/configure-firewalld
@@ -574,12 +575,13 @@ Resources:
               owner: root
               group: root
           services:
-            openvpn-monitor:
-              enabled: "true"
-              ensureRunning: "true"
-              files:
-                - /usr/local/bin/openvpn-monitor.py
-                - /etc/systemd/system/openvpn-monitor.service
+            sysvinit:
+              openvpn-monitor:
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - /usr/local/bin/openvpn-monitor.py
+                  - /etc/systemd/system/openvpn-monitor.service
         auto-patching:
           files:
             /tmp/mycron:
