@@ -495,7 +495,7 @@ Resources:
               content: !Sub |
                 import SocketServer
 
-                HOST = "localhost"
+                HOST = "0.0.0.0"
                 PORT = ${OpenVPNHealthCheckPort}
 
                 class EchoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
