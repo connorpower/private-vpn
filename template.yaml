@@ -219,6 +219,19 @@ Resources:
       RuleAction: allow
       RuleNumber: 200
 
+  PublicSubnetNACLInboundEphemeralTCP:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicSubnetNACL
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+      PortRange:
+        From: 32768
+        To: 61000
+      Protocol: 6 # TCP
+      RuleAction: allow
+      RuleNumber: 300
+
   PublicSubnetNACLOutbound80TCP:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
