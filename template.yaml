@@ -288,32 +288,6 @@ Resources:
   # EC2 / ELB
   ##############################################################################
 
-  VPNELBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: vpn-elb-sg
-      GroupDescription: Security group for the VPN ELB
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: udp
-          FromPort: 1194
-          ToPort: 1194
-          CidrIp: 0.0.0.0/0
-          Description: OpenVPN over UDP
-      SecurityGroupEgress:
-        - IpProtocol: -1
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
-          Description: All traffic
-      Tags:
-        - Key: Name
-          Value: !Sub ${ProjectName} Security Group for the VPN ELB
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: !Ref CostAllocationTagKey
-          Value: !Ref CostAllocationTagValue
-
   VPNEC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -321,12 +295,6 @@ Resources:
       GroupDescription: Security group for OpenVPN EC2 instances
       VpcId: !Ref VPC
       SecurityGroupIngress:
-#        - IpProtocol: udp
-#          FromPort: 1194
-#          ToPort: 1194
-#          SourceSecurityGroupId: !Ref VPNELBSecurityGroup
-#          Description: OpenVPN over UDP
-      # TODO: remove and replace with above
         - IpProtocol: udp
           FromPort: 1194
           ToPort: 1194
@@ -341,14 +309,9 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref OpenVPNHealthCheckPort
           ToPort: !Ref OpenVPNHealthCheckPort
-          SourceSecurityGroupId: !Ref VPNELBSecurityGroup
+          CidrIp: !Ref PublicSubnetCIDR
           Description: Custom health check port for ELB health checks
       SecurityGroupEgress:
-        - IpProtocol: -1
-          FromPort: 0
-          ToPort: 65535
-          SourceSecurityGroupId: !Ref VPNELBSecurityGroup
-          Description: All traffic
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
