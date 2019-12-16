@@ -451,13 +451,13 @@ Resources:
                 firewall-cmd --permanent --zone=internal --remove-service=dhcpv6-client
                 firewall-cmd --permanent --zone=internal --add-source=10.8.0.0/22
                 firewall-cmd --reload
-              mode: 000744
+              mode: "000744"
               owner: root
               group: root
             /etc/sysctl.conf:
               content: |
                 net.ipv4.ip_forward=1
-              mode: 000644
+              mode: "000644"
               owner: root
               group: root
           commands:
@@ -470,8 +470,8 @@ Resources:
                     --no-source-dest-check"
           services:
             firewalld:
-              enabled: true
-              ensureRunning: true
+              enabled: "true"
+              ensureRunning: "true"
               files:
                 - /tmp/configure-firewalld
             commands:
@@ -481,7 +481,7 @@ Resources:
           files:
             /tmp/mycron:
               content: 0 0 * * * yum -y update --security
-              mode: 000644
+              mode: "000644"
               owner: root
               group: root
           commands:
